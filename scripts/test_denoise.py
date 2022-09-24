@@ -28,19 +28,19 @@ import data_hub
 import cache_io
 
 # -- network --
-import uformer
-import uformer.exps as exps_menu
-from uformer import configs
-from uformer import lightning
-from uformer.utils.misc import optional,rslice_pair,task_keys
-from uformer.utils.metrics import compute_psnrs,compute_ssims
-from uformer.utils.model_utils import load_checkpoint
-from uformer.utils.proc_utils import spatial_chop,temporal_chop,expand2square
+import vrt
+import vrt.exps as exps_menu
+from vrt import configs
+from vrt import lightning
+from vrt.utils.misc import optional,rslice_pair,task_keys
+from vrt.utils.metrics import compute_psnrs,compute_ssims
+from vrt.utils.model_utils import load_checkpoint
+from vrt.utils.proc_utils import spatial_chop,temporal_chop,expand2square
 
 def run_exp(_cfg):
 
     # -- total time --
-    timer0 = uformer.utils.timer.ExpTimer()
+    timer0 = vrt.utils.timer.ExpTimer()
     timer0.start("total")
 
     # -- init --
@@ -64,9 +64,9 @@ def run_exp(_cfg):
     results.timer_deno = []
 
     # -- load model --
-    model_cfg = uformer.extract_model_io(cfg)
+    model_cfg = vrt.extract_model_io(cfg)
     print(model_cfg)
-    model = uformer.load_model(**model_cfg)
+    model = vrt.load_model(**model_cfg).to(cfg.device)
     substr = optional(cfg,"chkpt","")
     load_checkpoint(model,cfg.use_train,substr)
     imax = 255.
@@ -99,10 +99,14 @@ def run_exp(_cfg):
         vid_frames,region = sample['fnums'],optional(sample,'region',None)
         fstart = min(vid_frames)
         noisy,clean = rslice_pair(noisy,clean,region)
+        t,c,h,w = noisy.shape
+        sigma_img = th.ones((1,1,1,1)) * cfg.sigma
+        sigma_img = sigma_img.expand(t, 1, h, w).to(cfg.device)
+
         print("[%d] noisy.shape: " % index,noisy.shape)
 
         # -- create timer --
-        timer = uformer.utils.timer.ExpTimer()
+        timer = vrt.utils.timer.ExpTimer()
 
         # -- optical flow --
         timer.start("flow")
@@ -121,7 +125,12 @@ def run_exp(_cfg):
         s_overlap = cfg.spatial_crop_overlap
         t_size = cfg.temporal_crop_size
         t_overlap = cfg.temporal_crop_overlap
-        schop_p = partial(spatial_chop,s_size,s_overlap,model,verbose=s_verbose)
+        def wrap_fwd(vid):
+            t,c,h,w = vid.shape
+            sigma_img = th.ones((t,1,h,w),device=vid.device)
+            vid_in = th.cat([vid,sigma_img],1)
+            return model(vid_in[None,:])[0]
+        schop_p = partial(spatial_chop,s_size,s_overlap,wrap_fwd,verbose=s_verbose)
         tchop_p = partial(temporal_chop,t_size,t_overlap,schop_p,verbose=t_verbose)
         fwd_fxn = tchop_p # rename
 
@@ -131,12 +140,14 @@ def run_exp(_cfg):
 
             vshape = noisy.shape
             print("noisy.shape: ",noisy.shape)
-            noisy_sq,mask = expand2square(noisy,1024.)
-            print("noisy_sq.shape: ",noisy_sq.shape)
-            deno = fwd_fxn(noisy_sq/imax)
+            # noisy_sq,mask = expand2square(noisy,1024.)
+            noisy_in = noisy
+            # noisy_in = th.cat([noisy,sigma_img],1)
+            print("noisy_in.shape: ",noisy_in.shape)
+            deno = fwd_fxn(noisy_in/imax)
             # deno = tchop_p(noisy_sq/imax)
             print("deno.shape: ",deno.shape)
-            deno = th.masked_select(deno,mask.bool()).reshape(*vshape)
+            # deno = th.masked_select(deno,mask.bool()).reshape(*vshape)
             print("deno.shape: ",deno.shape)
             # t = noisy.shape[0]
             # deno = []
@@ -150,13 +161,13 @@ def run_exp(_cfg):
 
         # -- save example --
         out_dir = Path(cfg.saved_dir) / cfg.dname / cfg.attn_mode / cfg.vid_name
-        deno_fns = uformer.utils.io.save_burst(deno,out_dir,"deno",
+        deno_fns = vrt.utils.io.save_burst(deno,out_dir,"deno",
                                                fstart=fstart,div=1.,fmt="np")
-        deno_fns = uformer.utils.io.save_burst(deno,out_dir,"deno",
+        deno_fns = vrt.utils.io.save_burst(deno,out_dir,"deno",
                                                fstart=fstart,div=1.,fmt="png")
-        # uformer.utils.io.save_burst(clean,out_dir,"clean",
+        # vrt.utils.io.save_burst(clean,out_dir,"clean",
         #                             fstart=fstart,div=1.,fmt="np")
-        # uformer.utils.io.save_burst(noisy,out_dir,"noisy",
+        # vrt.utils.io.save_burst(noisy,out_dir,"noisy",
         #                             fstart=fstart,div=1.,fmt="np")
 
         # -- psnr --
@@ -204,19 +215,20 @@ def main():
     vid_names = ["bike-packing"]#,"blackswan","bmx-trees"]
     iexps = {"dname":dname,"vid_name":vid_names,"dset":dset}
     exps = exps_menu.exps_rgb_denoising(iexps,mode="test")
-    exps = [exps[0],exps[-1]]
+    exps = exps
 
     # -- group with default --
     cfg = configs.default_cfg()
+    cfg.isize = "192_192"
     # cfg.isize = "256_256"
     cfg.task = "rgb_denoise"
-    cfg.nframes = 10
+    cfg.nframes = 6
     cfg.frame_start = 0
     cfg.frame_end = cfg.frame_start + cfg.nframes - 1
     cfg.noise_version = "rgb_noise"
-    cfg.spatial_crop_size = 256
+    cfg.spatial_crop_size = 192
     cfg.spatial_crop_overlap = 0.0
-    cfg.temporal_crop_size = 5
+    cfg.temporal_crop_size = 6
     cfg.temporal_crop_overlap = 0/5. # 3 of 5 frames
     print(cfg)
     cache_io.append_configs(exps,cfg) # merge the two

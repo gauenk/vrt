@@ -1,12 +1,15 @@
 
-from .network_vrt import net
+from easydict import EasyDict as edict
+from .network_vrt import VRT as net
+from ..utils.misc import optional
 
-def load_model(cfg):
-    task = optional(cfg,"task","denoising")
+
+def load_model(**kwargs):
+    task = optional(kwargs,"task","denoising")
     model,datasets,args = init_from_task(task)
     return model
 
-def init_from_task(task):
+def init_from_task(task,**kwargs):
     ''' prepare model and dataset according to args.task. '''
 
     # define model
@@ -65,10 +68,13 @@ def init_from_task(task):
         args.window_size = [6,8,8]
         args.nonblind_denoising = False
 
-    elif task == ["denoise_reds",'008_VRT_videodenoising_DAVIS']:
-        model = net(upscale=1, img_size=[6,192,192], window_size=[6,8,8], depths=[8,8,8,8,8,8,8, 4,4, 4,4],
-                    indep_reconsts=[9,10], embed_dims=[96,96,96,96,96,96,96, 120,120, 120,120],
-                    num_heads=[6,6,6,6,6,6,6, 6,6, 6,6], pa_frames=2, deformable_groups=16,
+    elif task in ["denoising","denoise_davis",'008_VRT_videodenoising_DAVIS']:
+        model = net(upscale=1, img_size=[6,192,192], window_size=[6,8,8],
+                    depths=[8,8,8,8,8,8,8, 4,4, 4,4],
+                    indep_reconsts=[9,10],
+                    embed_dims=[96,96,96,96,96,96,96, 120,120, 120,120],
+                    num_heads=[6,6,6,6,6,6,6, 6,6, 6,6], pa_frames=2,
+                    deformable_groups=16,
                     nonblind_denoising=True)
         datasets = ['Set8', 'DAVIS-test']
         args.scale = 1

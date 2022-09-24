@@ -11,6 +11,7 @@ from functools import partial
 def _vprint(verbose,*args,**kwargs):
     if verbose:
         print(*args,**kwargs)
+
 def expand2square(timg,factor=16.0):
     t, _, h, w = timg.size()
 
@@ -52,7 +53,7 @@ def get_chunks(size,chunk_size,overlap):
         else:
             points.append(pt)
         counter += 1
-    return points
+    return np.unique(points)
 
 def get_spatial_chunk(vid,h_chunk,w_chunk,size):
     return vid[...,h_chunk:h_chunk+size,w_chunk:w_chunk+size]
@@ -76,13 +77,12 @@ def spatial_chop(ssize,overlap,fwd_fxn,vid,flows=None,verbose=False):
             vid_chunk = get_spatial_chunk(vid,h_chunk,w_chunk,ssize)
             vprint("s_chunk: ",h_chunk,w_chunk,vid_chunk.shape)
             if flows: deno_chunk = fwd_fxn(vid_chunk,flows)
-            else: deno_chunk = fwd_fxn(vid_chunk,flows)
+            else: deno_chunk = fwd_fxn(vid_chunk)
             ones = th.ones_like(deno_chunk)
             fill_spatial_chunk(deno,deno_chunk,h_chunk,w_chunk,ssize)
             fill_spatial_chunk(Z,ones,h_chunk,w_chunk,ssize)
     deno /= Z # normalize across overlaps
     return deno
-
 
 def temporal_chop(tsize,overlap,fwd_fxn,vid,flows=None,verbose=False):
     """
@@ -102,7 +102,7 @@ def temporal_chop(tsize,overlap,fwd_fxn,vid,flows=None,verbose=False):
 
         # -- process --
         if flows: deno_chunk = fwd_fxn(vid_chunk,flows)
-        else: deno_chunk = fwd_fxn(vid_chunk,flows)
+        else: deno_chunk = fwd_fxn(vid_chunk)
 
         # -- accumulate --
         ones = th.ones_like(deno_chunk)
