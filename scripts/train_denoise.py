@@ -248,6 +248,7 @@ def main():
 
     # -- mix --
     cache_io.append_configs(exps,cfg) # merge the two
+    exps[0].attn_mode = "original"
 
     # -- launch each experiment --
     for exp_num,exp in enumerate(exps):

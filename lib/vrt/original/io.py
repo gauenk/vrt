@@ -68,7 +68,7 @@ def init_from_task(task,**kwargs):
         args.window_size = [6,8,8]
         args.nonblind_denoising = False
 
-    elif task in ["denoising","denoise_davis",'008_VRT_videodenoising_DAVIS']:
+    elif task in ["denoising","denoise_davis",'008_VRT_videodenoising_DAVIS',"rgb_denoise"]:
         model = net(upscale=1, img_size=[6,192,192], window_size=[6,8,8],
                     depths=[8,8,8,8,8,8,8, 4,4, 4,4],
                     indep_reconsts=[9,10],

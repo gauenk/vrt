@@ -12,7 +12,8 @@ import torch.utils.data as data
 from torchvision import transforms
 from PIL import Image
 
-import utils.utils_video as utils_video
+from vrt.utils import utils_video as utils_video
+# import utils.utils_video as utils_video
 
 
 class VideoRecurrentTestDataset(data.Dataset):
@@ -70,6 +71,7 @@ class VideoRecurrentTestDataset(data.Dataset):
         for subfolder_lq, subfolder_gt in zip(subfolders_lq, subfolders_gt):
             # get frame list for lq and gt
             subfolder_name = osp.basename(subfolder_lq)
+            print(subfolder_lq)
             img_paths_lq = sorted(list(utils_video.scandir(subfolder_lq, full_path=True)))
             img_paths_gt = sorted(list(utils_video.scandir(subfolder_gt, full_path=True)))
 
@@ -215,6 +217,7 @@ class SingleVideoRecurrentTestDataset(data.Dataset):
     def __getitem__(self, index):
         folder = self.folders[index]
 
+        print(self.imgs_lq[folder])
         if self.cache_data:
             imgs_lq = self.imgs_lq[folder]
         else:

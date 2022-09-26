@@ -1,13 +1,16 @@
+
+# -- api --
 from . import original
+from . import augmented
 
 # -- for loading model --
 from .utils.misc import optional
 from .augmented import extract_model_io # set input params
 
 def load_model(**kwargs):
-    attn_type = optional(kwargs,'attn_type','original')
-    if "original" in attn_type:
+    attn_mode = optional(kwargs,'attn_mode','original')
+    if "original" in attn_mode:
         return original.load_model(**kwargs)
     else:
-        raise ValueError("")
+        return augmented.load_model(**kwargs)
 

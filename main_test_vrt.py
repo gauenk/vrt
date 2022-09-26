@@ -15,8 +15,10 @@ from os import path as osp
 from collections import OrderedDict
 from torch.utils.data import DataLoader
 
-from models.network_vrt import VRT as net
-from utils import utils_image as util
+# from models.network_vrt import VRT as net
+from vrt.original.network_vrt import VRT as net
+from vrt.utils import utils_image as util
+# from utils import utils_image as util
 from data.dataset_video_test import VideoRecurrentTestDataset, VideoTestVimeo90KDataset, \
     SingleVideoRecurrentTestDataset, VFI_DAVIS, VFI_UCF101, VFI_Vid4
 
@@ -245,6 +247,7 @@ def prepare_model_dataset(args):
 
     pretrained_model = torch.load(model_path)
     model.load_state_dict(pretrained_model['params'] if 'params' in pretrained_model.keys() else pretrained_model, strict=True)
+    print("model loaded.")
 
     # download datasets
     if os.path.exists(f'{args.folder_lq}'):
@@ -334,6 +337,7 @@ def test_clip(lq, model, args):
         for h_idx in h_idx_list:
             for w_idx in w_idx_list:
                 in_patch = lq[..., h_idx:h_idx+size_patch_testing, w_idx:w_idx+size_patch_testing]
+                print("in_patch.shape:" ,in_patch.shape)
                 out_patch = model(in_patch).detach().cpu()
 
                 out_patch_mask = torch.ones_like(out_patch)

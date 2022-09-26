@@ -1435,7 +1435,7 @@ class VRT(nn.Module):
         x = torch.cat([torch.flip(x[:, :, :, 1:pad+1], [3]), x, torch.flip(x[:, :, :, -pad-1:-1], [3])], 3)
         return x
 
-    def forward(self, x):
+    def forward(self, x, flows=None):
         # x: (N, D, C, H, W)
 
         # main network
