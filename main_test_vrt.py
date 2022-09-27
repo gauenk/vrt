@@ -35,7 +35,7 @@ def main():
                         help='Tile size, [0,0,0] for no tile during testing (testing as a whole)')
     parser.add_argument('--tile_overlap', type=int, nargs='+', default=[2,20,20],
                         help='Overlapping of different tiles')
-    parser.add_argument('--num_workers', type=int, default=16, help='number of workers in data loading')
+    parser.add_argument('--num_workers', type=int, default=2, help='number of workers in data loading')
     parser.add_argument('--save_result', action='store_true', help='save resulting image')
     args = parser.parse_args()
 
@@ -253,6 +253,7 @@ def prepare_model_dataset(args):
     if os.path.exists(f'{args.folder_lq}'):
         print(f'using dataset from {args.folder_lq}')
     else:
+        print(f"downloading a dataset since {args.folder_lq} doesn't exist.")
         if 'vimeo' in args.folder_lq.lower():
             print(f'Vimeo dataset is not at {args.folder_lq}! Please refer to #training of Readme.md to download it.')
         else:

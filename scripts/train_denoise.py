@@ -241,6 +241,8 @@ def main():
     cfg.rbwd = "true"
     # cfg.limit_train_batches = 0.25 # with w
     cfg.limit_train_batches = 0.025 # with pd
+    cfg.aug_training_scales = [0.5,0.75,1.]
+    cfg.aug_training_flips = True
 
     # -- pick an exp --
     exps = [exps[-1]] # run0
