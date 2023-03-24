@@ -503,7 +503,7 @@ def compute_mask(D, H, W, window_size, shift_size, device):
 
     img_mask = torch.zeros((1, D, H, W, 1), device=device)  # 1 Dp Hp Wp 1
     cnt = 0
-    print("window_size: ",window_size,shift_size)
+    # print("window_size: ",window_size,shift_size)
     for d in slice(-window_size[0]), slice(-window_size[0], -shift_size[0]), slice(-shift_size[0], None):
         for h in slice(-window_size[1]), slice(-window_size[1], -shift_size[1]), slice(-shift_size[1], None):
             for w in slice(-window_size[2]), slice(-window_size[2], -shift_size[2]), slice(-shift_size[2], None):
@@ -660,7 +660,7 @@ class WindowAttention(nn.Module):
     def attention(self, q, k, v, mask, x_shape, relative_position_encoding=True):
         B_, N, C = x_shape
         attn = (q * self.scale) @ k.transpose(-2, -1)
-        print("x_shape: ",x_shape,q.shape)
+        # print("x_shape: ",x_shape,q.shape)
 
         if relative_position_encoding:
             relative_position_bias = self.relative_position_bias_table[
@@ -672,7 +672,7 @@ class WindowAttention(nn.Module):
         else:
             nW = mask.shape[0]
             attn = attn.view(B_ // nW, nW, self.num_heads, N, N) + mask[:, :N, :N].unsqueeze(1).unsqueeze(0)
-            print("mask in use: ",mask[:, :N, :N].shape,attn.view(B_ // nW, nW, self.num_heads, N, N).shape,attn.shape)
+            # print("mask in use: ",mask[:, :N, :N].shape,attn.view(B_ // nW, nW, self.num_heads, N, N).shape,attn.shape)
             attn = attn.view(-1, self.num_heads, N, N)
             attn = self.softmax(attn)
 
@@ -900,7 +900,7 @@ class TMSAG(nn.Module):
         self.shift_size = list(i // 2 for i in window_size) if shift_size is None else shift_size
 
         # build blocks
-        print("TMSAG: ",depth)
+        # print("TMSAG: ",depth)
         self.blocks = nn.ModuleList([
             TMSA(
                 dim=dim,
@@ -934,7 +934,7 @@ class TMSAG(nn.Module):
         Wp = int(np.ceil(W / window_size[2])) * window_size[2]
         attn_mask = compute_mask(Dp, Hp, Wp, window_size, shift_size, x.device)
 
-        print("attn: ",attn_mask.shape,Dp, Hp, Wp, window_size, shift_size)
+        # print("attn: ",attn_mask.shape,Dp, Hp, Wp, window_size, shift_size)
         # nz_chnlz = th.unique(th.where(attn_mask != 0)[0])[:3]
         # attn_mask_s = attn_mask[nz_chnlz][:,None,]
         # attn_mask_s += attn_mask_s.min()
@@ -1114,13 +1114,13 @@ class Stage(nn.Module):
         x = self.linear1(self.residual_group1(x).transpose(1, 4)).transpose(1, 4) + x
         x = self.linear2(self.residual_group2(x).transpose(1, 4)).transpose(1, 4) + x
 
-        print("[in] x.shape: ",x.shape,self.pa_frames,self.num_heads)
+        # print("[in] x.shape: ",x.shape,self.pa_frames,self.num_heads)
 
         if self.pa_frames:
             x = x.transpose(1, 2)
             x_backward, x_forward = getattr(self, f'get_aligned_feature_{self.pa_frames}frames')(x, flows_backward, flows_forward)
             x = self.pa_fuse(torch.cat([x, x_backward, x_forward], 2).permute(0, 1, 3, 4, 2)).permute(0, 4, 1, 2, 3)
-        print("[out] x.shape: ",x.shape)
+        # print("[out] x.shape: ",x.shape)
 
         return x
 
@@ -1314,6 +1314,8 @@ class VRT(nn.Module):
         self.pa_frames = pa_frames
         self.recal_all_flows = recal_all_flows
         self.nonblind_denoising = nonblind_denoising
+        self.times = {}
+
 
         # conv_first
         if self.pa_frames:
@@ -1437,6 +1439,7 @@ class VRT(nn.Module):
 
     def forward(self, x, flows=None):
         # x: (N, D, C, H, W)
+        print("x.shape: ",x.shape)
 
         # main network
         if self.pa_frames:
@@ -1600,16 +1603,16 @@ class VRT(nn.Module):
 
     def forward_features(self, x, flows_backward, flows_forward):
         '''Main network for feature extraction.'''
-        print("x.shape: ",x.shape)
-        print("flows_backward.shape: ",flows_backward[0].shape)
+        # print("x.shape: ",x.shape)
+        # print("flows_backward.shape: ",flows_backward[0].shape)
 
         x1 = self.stage1(x, flows_backward[0::4], flows_forward[0::4])
-        print("x1.shape: ",x1.shape)
+        # print("x1.shape: ",x1.shape)
         x2 = self.stage2(x1, flows_backward[1::4], flows_forward[1::4])
         x3 = self.stage3(x2, flows_backward[2::4], flows_forward[2::4])
         x4 = self.stage4(x3, flows_backward[3::4], flows_forward[3::4])
         x = self.stage5(x4, flows_backward[2::4], flows_forward[2::4])
-        print("x.shape: ",x.shape)
+        # print("x.shape: ",x.shape)
         x = self.stage6(x + x3, flows_backward[1::4], flows_forward[1::4])
         x = self.stage7(x + x2, flows_backward[0::4], flows_forward[0::4])
         x = x + x1

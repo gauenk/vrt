@@ -15,75 +15,75 @@ import numpy as np
 from .vrt import VRT as net
 
 # -- misc imports --
-from ..common import optional as _optional
+# from ..common import optional as _optional
 from ..utils.model_utils import load_checkpoint_module,load_checkpoint_qkv
 # from ..utils.model_utils import load_checkpoint_mix_qkv
 from ..utils.model_utils import remove_lightning_load_state
 from ..utils.model_utils import filter_rel_pos,get_recent_filename
 
-# -- auto populate fields to extract config --
-_fields = []
-def optional_full(init,pydict,field,default):
-    if not(field in _fields) and init:
-        _fields.append(field)
-    return _optional(pydict,field,default)
+# -- io --
+# from ..utils import model_io
+from dev_basics import arch_io
+
+# -- config --
+from dev_basics.configs import ExtractConfig,dcat
+econfig = ExtractConfig(__file__) # init extraction
+extract_config = econfig.extract_config # rename extraction
 
 # -- load model --
-def load_model(*args,**kwargs):
+@econfig.set_init
+def load_model(cfg):
 
-    # -- allows for all keys to be aggregated at init --
-    init = _optional(kwargs,'__init',False) # purposefully weird key
-    optional = partial(optional_full,init)
+    # -- config --
+    econfig.init(cfg)
+    device = econfig.optional(cfg,"device","cuda:0")
+    cfgs = econfig.extract_dict_of_pairs(cfg,{"arch":arch_pairs(),
+                                              "io":io_pairs()},restrict=True)
+    if econfig.is_init: return
 
-    # -- defaults changed by noise version --
-    noise_version = optional(kwargs,'noise_version',"noise")
-    if "noise" in noise_version:
-        default_modulator = True
-        default_depth = [1, 2, 8, 8, 2, 8, 8, 2, 1]
-        # default_modulator = False
-        # default_depth = [2, 2, 2, 2, 2, 2, 2, 2, 2]
-    elif noise_version == "blur":
-        default_modulator = True
-        default_depth = [1, 2, 8, 8, 2, 8, 8, 2, 1]
-    else:
-        raise ValueError(f"Uknown noise version [{noise_version}]")
+    # -- load model --
+    model = net(**cfgs.arch)
 
-    # -- get cfg --
-    nchnls = optional(kwargs,'nchnls',3)
-    input_size = optional(kwargs,'input_size',128)
-    depths = optional(kwargs,'input_depth',default_depth)
-    device = optional(kwargs,'device','cuda:0')
-    attn_mode = optional(kwargs,'attn_mode','default')
-    task = optional(kwargs,'task','denoising')
+    # -- load model --
+    load_pretrained(model,cfgs.io)
 
-    # -- break here if init --
-    if init: return
-    model,datasets,args = init_from_task(task)
+    # -- to device --
+    model = model.to(device)
+
     return model
 
-# -- run to populate "_fields" --
-load_model(__init=True)
+def load_pretrained(model,cfg):
+    def mod_fxn(state):
+        return state['params']
+    if cfg.pretrained_load:
+        print("Loading model: ",cfg.pretrained_path)
+        arch_io.load_checkpoint(model,cfg.pretrained_path,
+                                cfg.pretrained_root,cfg.pretrained_type,
+                                mod=mod_fxn)
 
+def io_pairs():
+    pretrained_path = "model_zoo/vrt/008_VRT_videodenoising_DAVIS.pth"
+    pairs = {"pretrained_load":True,
+             "pretrained_path":str(pretrained_path),
+             "pretrained_type":"mod",
+             "pretrained_root":"."}
+    return pairs
 
-# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-#
-#     Extracting Relevant Fields from Larger Dict
-#
-# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-def extract_model_io(cfg):
-    # -- used to be manual --
-    # fields = ["attn_mode","ws","wt","k","ps","pt","stride0",
-    #           "stride1","dil","nbwd","rbwd","exact","bs",
-    #           "noise_version","filter_by_attn"]
-
-    # -- auto populated fields --
-    fields = _fields
-    model_cfg = {}
-    for field in fields:
-        if field in cfg:
-            model_cfg[field] = cfg[field]
-    return model_cfg
+def arch_pairs():
+    pairs = {#"attn_mode":"default",
+             #"task":"denoising",
+             "upscale":1,
+             "img_size":[6,192,192],
+             "window_size":[6,8,8],
+             "depths":[8,8,8,8,8,8,8,4,4,4,4],
+             "indep_reconsts":[9,10],
+             "embed_dims":[96,96,96,96,96,96,96,120,120,120,120],
+             "num_heads":[6,6,6,6,6,6,6,6,6,6,6],
+             "pa_frames":2,
+             "deformable_groups":16,
+             "nonblind_denoising":True,
+             "warp_mode":"default"}
+    return pairs
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #

@@ -17,7 +17,7 @@ from einops import rearrange
 from einops.layers.torch import Rearrange
 
 # -- local imports --
-from .flows import get_flows
+from .flows import get_flows,get_warped_frames
 from .flows import get_aligned_image_2frames
 from .tmsa import RTMSA
 from .stage import Stage
@@ -83,6 +83,7 @@ class VRT(nn.Module):
                  use_checkpoint_ffn=False,
                  no_checkpoint_attn_blocks=[],
                  no_checkpoint_ffn_blocks=[],
+                 warp_mode="default"
                  ):
         super().__init__()
         self.in_chans = in_chans
@@ -91,6 +92,9 @@ class VRT(nn.Module):
         self.pa_frames = pa_frames
         self.recal_all_flows = recal_all_flows
         self.nonblind_denoising = nonblind_denoising
+        self.warp_mode = warp_mode
+        self.times = {}
+        self.warps = 0
 
         # conv_first
         if self.pa_frames:
@@ -219,13 +223,18 @@ class VRT(nn.Module):
             flows_backward, flows_forward = get_flows(x,self.pa_frames,self.spynet)
 
             # warp input
-            x_backward, x_forward = get_aligned_image_2frames(x,  flows_backward[0], flows_forward[0])
-            x = torch.cat([x, x_backward, x_forward], 2)
+            x = get_warped_frames(x,flows_backward[0],flows_forward[0],self.warp_mode)
+            self.warps = x.detach()
+            # x_backward, x_forward = get_aligned_image_2frames(x,  flows_backward[0], flows_forward[0])
+            # x = torch.cat([x, x_backward, x_forward], 2)
 
             # concatenate noise level map
+            print("x.shape: ",x.shape,noise_level_map.shape)
+            print(self.nonblind_denoising)
             if self.nonblind_denoising:
                 x = torch.cat([x, noise_level_map], 2)
 
+            print("x.shape: ",x.shape)
             if self.upscale == 1:
                 # video deblurring, etc.
                 x = self.conv_first(x.transpose(1, 2))

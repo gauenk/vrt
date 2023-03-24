@@ -72,9 +72,12 @@ class TMSA(nn.Module):
         self.use_checkpoint_attn = use_checkpoint_attn
         self.use_checkpoint_ffn = use_checkpoint_ffn
 
-        assert 0 <= self.shift_size[0] < self.window_size[0], "shift_size must in 0-window_size"
-        assert 0 <= self.shift_size[1] < self.window_size[1], "shift_size must in 0-window_size"
-        assert 0 <= self.shift_size[2] < self.window_size[2], "shift_size must in 0-window_size"
+        assert 0 <= self.shift_size[0] < self.window_size[0],\
+            "shift_size must in 0-window_size"
+        assert 0 <= self.shift_size[1] < self.window_size[1],\
+            "shift_size must in 0-window_size"
+        assert 0 <= self.shift_size[2] < self.window_size[2],\
+            "shift_size must in 0-window_size"
 
         self.norm1 = norm_layer(dim)
         self.attn = WindowAttention(dim, window_size=self.window_size,
@@ -88,7 +91,8 @@ class TMSA(nn.Module):
 
     def forward_part1(self, x, mask_matrix):
         B, D, H, W, C = x.shape
-        window_size, shift_size = get_window_size((D, H, W), self.window_size, self.shift_size)
+        window_size, shift_size = get_window_size((D, H, W),
+                                        self.window_size, self.shift_size)
 
         x = self.norm1(x)
 
@@ -97,12 +101,14 @@ class TMSA(nn.Module):
         pad_d1 = (window_size[0] - D % window_size[0]) % window_size[0]
         pad_b = (window_size[1] - H % window_size[1]) % window_size[1]
         pad_r = (window_size[2] - W % window_size[2]) % window_size[2]
-        x = F.pad(x, (0, 0, pad_l, pad_r, pad_t, pad_b, pad_d0, pad_d1), mode='constant')
+        x = F.pad(x, (0, 0, pad_l, pad_r, pad_t,
+                      pad_b, pad_d0, pad_d1), mode='constant')
 
         _, Dp, Hp, Wp, _ = x.shape
         # cyclic shift
         if any(i > 0 for i in shift_size):
-            shifted_x = torch.roll(x, shifts=(-shift_size[0], -shift_size[1], -shift_size[2]), dims=(1, 2, 3))
+            shifted_x = torch.roll(x, shifts=(-shift_size[0], -shift_size[1],
+                                              -shift_size[2]), dims=(1, 2, 3))
             attn_mask = mask_matrix
         else:
             shifted_x = x
@@ -120,7 +126,8 @@ class TMSA(nn.Module):
 
         # reverse cyclic shift
         if any(i > 0 for i in shift_size):
-            x = torch.roll(shifted_x, shifts=(shift_size[0], shift_size[1], shift_size[2]), dims=(1, 2, 3))
+            x = torch.roll(shifted_x, shifts=(shift_size[0], shift_size[1],
+                                              shift_size[2]), dims=(1, 2, 3))
         else:
             x = shifted_x
 
@@ -239,6 +246,25 @@ class TMSAG(nn.Module):
         x = rearrange(x, 'b d h w c -> b c d h w')
 
         return x
+
+@lru_cache()
+def compute_mask(D, H, W, window_size, shift_size, device):
+    """ Compute attnetion mask for input of size (D, H, W). @lru_cache caches each stage results. """
+
+    img_mask = torch.zeros((1, D, H, W, 1), device=device)  # 1 Dp Hp Wp 1
+    cnt = 0
+    # print("window_size: ",window_size,shift_size)
+    for d in slice(-window_size[0]), slice(-window_size[0], -shift_size[0]), slice(-shift_size[0], None):
+        for h in slice(-window_size[1]), slice(-window_size[1], -shift_size[1]), slice(-shift_size[1], None):
+            for w in slice(-window_size[2]), slice(-window_size[2], -shift_size[2]), slice(-shift_size[2], None):
+                img_mask[:, d, h, w, :] = cnt
+                cnt += 1
+    mask_windows = window_partition(img_mask, window_size)  # nW, ws[0]*ws[1]*ws[2], 1
+    mask_windows = mask_windows.squeeze(-1)  # nW, ws[0]*ws[1]*ws[2]
+    attn_mask = mask_windows.unsqueeze(1) - mask_windows.unsqueeze(2)
+    attn_mask = attn_mask.masked_fill(attn_mask != 0, float(-100.0)).masked_fill(attn_mask == 0, float(0.0))
+
+    return attn_mask
 
 
 class RTMSA(nn.Module):

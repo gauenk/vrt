@@ -29,6 +29,7 @@ from .flows import flow_warp
 def get_aligned_feature_2frames(x, flows_backward, flows_forward, pa_deform):
     '''Parallel feature warping for 2 frames.'''
 
+    # print(flows_backward[0].shape)
     # backward
     n = x.size(1)
     x_backward = [torch.zeros_like(x[:, -1, ...])]
