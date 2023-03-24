@@ -16,8 +16,15 @@ from operator import mul
 from einops import rearrange
 from einops.layers.torch import Rearrange
 
+# -- project imports --
+import torch as th
+import dnls
+
 # -- local imports --
 from . import aligned
+from .aligned import flow_warp
+# from .flows import get_warped_frames
+# # get_warp_2f
 from .tmsa import TMSAG
 from .mlp import Mlp_GEGLU
 from .deform_conv import DCNv2PackFlowGuided
@@ -64,10 +71,12 @@ class Stage(nn.Module):
                  reshape=None,
                  max_residue_magnitude=10,
                  use_checkpoint_attn=False,
-                 use_checkpoint_ffn=False
+                 use_checkpoint_ffn=False,
+                 warp_mode="default"
                  ):
         super(Stage, self).__init__()
         self.pa_frames = pa_frames
+        self.warp_mode =  warp_mode
 
         # reshape the tensor
         if reshape == 'none':
@@ -131,11 +140,74 @@ class Stage(nn.Module):
 
         if self.pa_frames:
             x = x.transpose(1, 2)
-            fxn_name = f'get_aligned_feature_{self.pa_frames}frames'
-            aligned_fxn = getattr(aligned,fxn_name)
-            x_backward, x_forward = aligned_fxn(x, flows_backward,
-                                                flows_forward,self.pa_deform)
+            x_backward, x_forward = get_aligned(x,flows_backward,flows_forward,
+                                                self.pa_frames,self.pa_deform,
+                                                self.warp_mode)
             x = self.pa_fuse(
                 torch.cat([x, x_backward, x_forward], 2).permute(0, 1, 3, 4, 2)
             ).permute(0, 4, 1, 2, 3)
         return x
+
+
+def get_aligned(vid,bflow,fflow,pa_frames,pa_deform,mode):
+    if mode == "default":
+        fxn_name = f'get_aligned_feature_{pa_frames}frames'
+        aligned_fxn = getattr(aligned,fxn_name)
+        bwd,fwd = aligned_fxn(vid, bflow, fflow, pa_deform)
+    else:
+        fwd, bwd = dnls.nn.flow_patches_f.get_warp_2f(vid,fflow[0],bflow[0],
+                                                      k=pa_frames-1,ws=3,warp_ps=4,
+                                                      ps=3,stride0=2)
+        dims = th.arange(fwd.ndim)[2:].numpy().tolist()
+        # print("fwd: ",th.mean((fwd - vid)**2,dim=dims))
+        # print("bwd: ",th.mean((bwd - vid)**2,dim=dims))
+
+        # print("fwd.shape,pa_frames: ",fwd.shape,pa_frames)
+        # fwd,bwd = get_warp_2f(vid,fflow[0],bflow[0],k=self.pa_frames)
+        fwd,bwd = apply_pa_deform(vid,fwd,bwd,fflow,bflow,pa_deform)
+        # bwd,fwd = aligned.get_aligned_feature_2frames(vid, bflow, fflow, pa_deform)
+    return bwd,fwd
+
+    # n = x.size(1)
+    # x_backward = [torch.zeros_like(x[:, -1, ...])]
+    # for i in range(n - 1, 0, -1):
+    #     x_i = x[:, i, ...]
+    #     flow = flows_backward[0][:, i - 1, ...]
+    #     x_i_warped = flow_warp(x_i, flow.permute(0, 2, 3, 1), 'bilinear')  # frame i+1 aligned towards i
+    #     x_backward.insert(0, pa_deform(x_i, [x_i_warped], x[:, i - 1, ...], [flow]))
+
+    # # forward
+    # x_forward = [torch.zeros_like(x[:, 0, ...])]
+    # for i in range(0, n - 1):
+    #     x_i = x[:, i, ...]
+    #     flow = flows_forward[0][:, i, ...]
+    #     x_i_warped = flow_warp(x_i, flow.permute(0, 2, 3, 1), 'bilinear')  # frame i-1 aligned towards i
+    #     x_forward.append(pa_deform(x_i, [x_i_warped], x[:, i + 1, ...], [flow]))
+
+    # return [torch.stack(x_backward, 1), torch.stack(x_forward, 1)]
+
+def apply_pa_deform(vid,fwd,bwd,fflow,bflow,pa_deform):
+
+    T = vid.shape[1]
+
+    deform_fwd = th.zeros_like(vid)
+    for i in range(T-1):
+        x_i = vid[:, i, ...]
+        flow = fflow[0][:, i, ...]
+        x_i_warped = fwd[:, i]
+        # x_i_warped = flow_warp(x_i, flow.permute(0, 2, 3, 1), 'bilinear')  # frame i-1 aligned towards i
+        print(i,th.mean((x_i-x_i_warped)**2).item())
+        deform_fwd[:,i+1] = pa_deform(x_i, [x_i_warped], vid[:, i + 1, ...], [flow])
+
+    deform_bwd = th.zeros_like(vid)
+    for i in range(T - 1, 0, -1):
+        x_i = vid[:, i, ...]
+        flow = bflow[0][:, i - 1, ...]
+        x_i_warped = bwd[:, i]
+        # x_i_warped = flow_warp(x_i, flow.permute(0, 2, 3, 1), 'bilinear')  # frame i+1 aligned towards i
+        print(i,th.mean((x_i-x_i_warped)**2).item())
+        # print(i,x_i.shape,x_i_warped.shape)
+        deform_bwd[:,i-1] = pa_deform(x_i, [x_i_warped], vid[:, i - 1, ...], [flow])
+
+
+    return deform_fwd,deform_bwd

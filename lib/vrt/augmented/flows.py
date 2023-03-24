@@ -122,16 +122,12 @@ def get_flow_6frames(flows_forward, flows_backward, flows_forward2, flows_backwa
 # -- network api --
 def get_warped_frames(video,bflow,fflow,mode):
     if mode == "dnls":
-        bwd, fwd = get_dnls_aligned(video,bflow,fflow)
+        fwd, bwd = dnls.nn.flow_patches_f.get_warp_2f(video,fflow,bflow)
     else:
         bwd, fwd = get_aligned_image_2frames(video,bflow,fflow)
     print("video.shape, bwd.shape,fwd.shape: ",video.shape,bwd.shape,fwd.shape)
     video = torch.cat([video, bwd, fwd], 2)
     return video
-
-def get_dnls_aligned(video,bflow,fflow):
-    fwd,bwd = dnls.nn.flow_patches_f.get_warp_2f(video,bflow,fflow)
-    return bwd,fwd
 
 def get_aligned_image_2frames(x, flows_backward, flows_forward):
     '''Parallel feature warping for 2 frames.'''

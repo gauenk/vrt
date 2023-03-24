@@ -139,6 +139,7 @@ class VRT(nn.Module):
                         max_residue_magnitude=10 / scales[i],
                         use_checkpoint_attn=use_checkpoint_attns[i],
                         use_checkpoint_ffn=use_checkpoint_ffns[i],
+                        warp_mode=warp_mode
                         )
                     )
 
@@ -229,12 +230,12 @@ class VRT(nn.Module):
             # x = torch.cat([x, x_backward, x_forward], 2)
 
             # concatenate noise level map
-            print("x.shape: ",x.shape,noise_level_map.shape)
-            print(self.nonblind_denoising)
+            # print("x.shape: ",x.shape,noise_level_map.shape)
+            # print(self.nonblind_denoising)
             if self.nonblind_denoising:
                 x = torch.cat([x, noise_level_map], 2)
 
-            print("x.shape: ",x.shape)
+            # print("x.shape: ",x.shape)
             if self.upscale == 1:
                 # video deblurring, etc.
                 x = self.conv_first(x.transpose(1, 2))

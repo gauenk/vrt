@@ -31,7 +31,7 @@ def main():
     # -- configs --
     exps_cfg = {"group0":
                 {"dname":["set8"],"dset":["te"],
-                 "vid_name":["tractor"]},
+                 "vid_name":["tractor","hypersmooth"]},
                 # {"dname":["davis"],"dset":["val"],
                 #  "vid_name":["bike-packing"]},
                 "group1":{"warp_mode":["default","dnls"]},
