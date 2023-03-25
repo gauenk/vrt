@@ -91,6 +91,7 @@ class TMSA(nn.Module):
 
     def forward_part1(self, x, mask_matrix):
         B, D, H, W, C = x.shape
+        # print("x.shape: ",x.shape)
         window_size, shift_size = get_window_size((D, H, W),
                                         self.window_size, self.shift_size)
 
@@ -150,13 +151,14 @@ class TMSA(nn.Module):
         """
 
         # attention
-        if self.use_checkpoint_attn:
+        # print("self.use_checkpoint_attn: ",self.use_checkpoint_attn)
+        if self.use_checkpoint_attn and False:
             x = x + checkpoint.checkpoint(self.forward_part1, x, mask_matrix)
         else:
             x = x + self.forward_part1(x, mask_matrix)
 
         # feed-forward
-        if self.use_checkpoint_ffn:
+        if self.use_checkpoint_ffn and False:
             x = x + checkpoint.checkpoint(self.forward_part2, x)
         else:
             x = x + self.forward_part2(x)

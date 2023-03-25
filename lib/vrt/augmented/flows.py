@@ -125,7 +125,7 @@ def get_warped_frames(video,bflow,fflow,mode):
         fwd, bwd = dnls.nn.flow_patches_f.get_warp_2f(video,fflow,bflow)
     else:
         bwd, fwd = get_aligned_image_2frames(video,bflow,fflow)
-    print("video.shape, bwd.shape,fwd.shape: ",video.shape,bwd.shape,fwd.shape)
+    # print("video.shape, bwd.shape,fwd.shape: ",video.shape,bwd.shape,fwd.shape)
     video = torch.cat([video, bwd, fwd], 2)
     return video
 
@@ -139,15 +139,14 @@ def get_aligned_image_2frames(x, flows_backward, flows_forward):
     # print(th.all(flows_backward[-1]==0))
     # print(th.all(flows_backward[0]==0))
     for i in range(n - 1, 0, -1):
-        print(i,i-1,n)
+        # print(i,i-1,n)
         x_i = x[:, i, ...]
         flow = flows_backward[:, i - 1, ...]
-        print(i,x_i.shape,flow.shape)
+        # print(i,x_i.shape,flow.shape)
         x_backward.insert(0, flow_warp(x_i, flow.permute(0, 2, 3, 1), 'nearest4')) # frame i+1 aligned towards i
     # print(th.all(x_backward[-1]==0))
-    print("len(x_backward): ",len(x_backward))
-    print("len(x_backward): ",x_backward[0].shape)
-
+    # print("len(x_backward): ",len(x_backward))
+    # print("len(x_backward): ",x_backward[0].shape)
 
     # forward
     x_forward = [torch.zeros_like(x[:, 0, ...]).repeat(1, 4, 1, 1)]
@@ -204,7 +203,7 @@ def flow_warp(x, flow, interp_mode='bilinear', padding_mode='zeros', align_corne
         output11 = F.grid_sample(x, torch.stack((vgrid_x_ceil, vgrid_y_ceil), dim=3), mode='nearest', padding_mode=padding_mode, align_corners=align_corners)
 
         out = torch.cat([output00, output01, output10, output11], 1)
-        print("out.shape: ",out.shape)
+        # print("out.shape: ",out.shape)
         return out
 
     else:

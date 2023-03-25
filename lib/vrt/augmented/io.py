@@ -82,7 +82,8 @@ def arch_pairs():
              "pa_frames":2,
              "deformable_groups":16,
              "nonblind_denoising":True,
-             "warp_mode":"default"}
+             "warp_mode":"default",
+             "sigma":-1}
     return pairs
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

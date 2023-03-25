@@ -3,6 +3,10 @@
 from . import original
 from . import augmented
 
+# -- lightning default --
+from . import lightning
+
+
 # -- for loading model --
 from .utils.misc import optional
 # from .augmented import extract_model_io # set input params

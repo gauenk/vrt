@@ -15,6 +15,7 @@ from functools import reduce, lru_cache
 from operator import mul
 from einops import rearrange
 from einops.layers.torch import Rearrange
+import torch as th
 
 # -- local imports --
 from .flows import get_flows,get_warped_frames
@@ -83,7 +84,8 @@ class VRT(nn.Module):
                  use_checkpoint_ffn=False,
                  no_checkpoint_attn_blocks=[],
                  no_checkpoint_ffn_blocks=[],
-                 warp_mode="default"
+                 warp_mode="default",
+                 sigma=-1,
                  ):
         super().__init__()
         self.in_chans = in_chans
@@ -95,6 +97,7 @@ class VRT(nn.Module):
         self.warp_mode = warp_mode
         self.times = {}
         self.warps = 0
+        self.sigma = sigma
 
         # conv_first
         if self.pa_frames:
@@ -105,6 +108,7 @@ class VRT(nn.Module):
         else:
             conv_first_in_chans = in_chans
         self.conv_first = nn.Conv3d(conv_first_in_chans, embed_dims[0], kernel_size=(1, 3, 3), padding=(0, 1, 1))
+        # print(embed_dims[0])
 
         # main body
         if self.pa_frames:
@@ -212,7 +216,10 @@ class VRT(nn.Module):
     def forward(self, x, flows=None):
         # x: (N, D, C, H, W)
 
+        x = self.optional_noise_map(x)
+
         # main network
+        # print("self.pa_frames: ",self.pa_frames)
         if self.pa_frames:
             # obtain noise level map
             if self.nonblind_denoising:
@@ -286,4 +293,10 @@ class VRT(nn.Module):
         x = self.norm(x)
         x = rearrange(x, 'n d h w c -> n c d h w')
 
+        return x
+
+    def optional_noise_map(self,x):
+        if x.shape[-3] == 3:
+            noise_map = th.ones_like(x[...,:1,:,:])*self.sigma/255
+            x = th.cat([x,noise_map],-3)
         return x
