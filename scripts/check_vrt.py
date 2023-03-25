@@ -44,7 +44,8 @@ def run_exp(cfg):
     for name,mod in model.named_children():
         print(name)
     batch_size = 1
-    summary(model,input_size=(batch_size, 2, 4, 64, 64))
+    H,W = [int(x) for x in cfg.isize.split("_")]
+    summary(model,input_size=(batch_size, 5, 4, H, W))
 
     return {"psnrs":[0.]}
 
@@ -64,12 +65,15 @@ def main():
                 {"sigma":50,
                  "seed":0,
                  "python_module":"vrt",
-                 "isize":"64_64",
+                 "isize":"128_128",
                  "task":"rgb_denoise",
                  "nframes":5,
                  "frame_start":0,
                  "frame_end":4,
                  # "depths":[2,]*11,
+                 # "embed_dims":[16,]*11,
+                 # "deformable_groups":4,
+                 # "num_heads":[4,]*11,
                  "noise_version":"rgb_noise",
                  "spatial_chunk_size":0,
                  "spatial_chunk_overlap":0.0,

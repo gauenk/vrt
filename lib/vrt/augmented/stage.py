@@ -126,6 +126,7 @@ class Stage(nn.Module):
         self.linear2 = nn.Linear(dim, dim)
 
         # parallel warping
+        # print("deformable_groups: ",deformable_groups)
         if self.pa_frames:
             self.pa_deform = DCNv2PackFlowGuided(dim, dim, 3, padding=1,
                                 deformable_groups=deformable_groups,
@@ -168,6 +169,7 @@ def get_aligned(vid,bflow,fflow,pa_frames,pa_deform,mode):
         # fwd,bwd = get_warp_2f(vid,fflow[0],bflow[0],k=self.pa_frames)
         fwd,bwd = apply_pa_deform(vid,fwd,bwd,fflow,bflow,pa_deform)
         # bwd,fwd = aligned.get_aligned_feature_2frames(vid, bflow, fflow, pa_deform)
+    # print("bwd.shape: ",bwd.shape)
     return bwd,fwd
 
     # n = x.size(1)

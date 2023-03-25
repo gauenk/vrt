@@ -55,6 +55,8 @@ class WindowAttention(nn.Module):
         self.proj = nn.Linear(dim, dim)
 
         # mutual attention with sine position encoding
+        # print("dim: ",dim)
+        # print("window_size: ",window_size)
         if self.mut_attn:
             self.register_buffer("position_bias",
                                  self.get_sine_position_encoding(window_size[1:], dim // 2, normalize=True))
