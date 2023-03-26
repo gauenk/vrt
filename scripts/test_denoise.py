@@ -37,8 +37,9 @@ def main():
                 #  "vid_name":["bike-packing"]},
                 "group1":{"warp_mode":["default","dnls"]},
                 "listed0":
-                {"pretrained_path":["output/train/baseline/checkpoints/70dd8ee1-770b-405d-a00f-69d4a228240d/70dd8ee1-770b-405d-a00f-69d4a228240d-epoch=10.ckpt",
-                  "output/train/baseline/checkpoints/70dd8ee1-770b-405d-a00f-69d4a228240d/70dd8ee1-770b-405d-a00f-69d4a228240d-epoch=17.ckpt",
+                {"pretrained_path":[
+                    "output/train/baseline/checkpoints/70dd8ee1-770b-405d-a00f-69d4a228240d/70dd8ee1-770b-405d-a00f-69d4a228240d-epoch=38.ckpt",
+                  "output/train/baseline/checkpoints/70dd8ee1-770b-405d-a00f-69d4a228240d/70dd8ee1-770b-405d-a00f-69d4a228240d-epoch=48.ckpt",
                   "output/train/baseline/008_VRT_videodenoising_DAVIS.pth"],
                  "pretrained_type":["lit","lit","mod"],
                  },
@@ -72,7 +73,7 @@ def main():
     results = cache_io.run_exps(exps,test.run,uuids=uuids,
                                 name=cache_name,enable_dispatch="slurm",
                                 records_fn=records_fn,skip_loop=False,
-                                records_reload=True,clear=False,
+                                records_reload=True,clear=True,
                                 clear_fxn=clear_fxn)
 
     # -- aggregate --
