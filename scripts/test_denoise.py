@@ -35,7 +35,7 @@ def main():
                  "vid_name":[["tractor","hypersmooth"]]},
                 # {"dname":["davis"],"dset":["val"],
                 #  "vid_name":["bike-packing"]},
-                "group1":{"warp_mode":["default","dnls"]},
+                "group1":{"warp_mode":["default","stnls"]},
                 "listed0":
                 {"pretrained_path":[
                     "output/train/baseline/checkpoints/70dd8ee1-770b-405d-a00f-69d4a228240d/70dd8ee1-770b-405d-a00f-69d4a228240d-epoch=38.ckpt",

@@ -83,6 +83,7 @@ def arch_pairs():
              "deformable_groups":16,
              "nonblind_denoising":True,
              "warp_mode":"default",
+             "spynet_path":None,
              "sigma":-1}
     return pairs
 
