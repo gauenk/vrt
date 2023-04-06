@@ -19,7 +19,7 @@ from einops import rearrange
 from einops.layers.torch import Rearrange
 
 # -- proj --
-import dnls
+import stnls
 
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -121,8 +121,8 @@ def get_flow_6frames(flows_forward, flows_backward, flows_forward2, flows_backwa
 
 # -- network api --
 def get_warped_frames(video,bflow,fflow,mode):
-    if mode == "dnls":
-        fwd, bwd = dnls.nn.flow_patches_f.get_warp_2f(video,fflow,bflow)
+    if mode == "stnls":
+        fwd, bwd = stnls.nn.flow_patches_f.get_warp_2f(video,fflow,bflow)
     else:
         bwd, fwd = get_aligned_image_2frames(video,bflow,fflow)
     # print("video.shape, bwd.shape,fwd.shape: ",video.shape,bwd.shape,fwd.shape)

@@ -18,7 +18,7 @@ from einops.layers.torch import Rearrange
 
 # -- project imports --
 import torch as th
-import dnls
+import stnls
 
 # -- local imports --
 from . import aligned
@@ -158,7 +158,7 @@ def get_aligned(vid,bflow,fflow,pa_frames,pa_deform,mode):
         bwd,fwd = aligned_fxn(vid, bflow, fflow, pa_deform)
     else:
         # print(vid.shape)
-        fwd, bwd = dnls.nn.flow_patches_f.get_warp_2f(vid,fflow[0],bflow[0],
+        fwd, bwd = stnls.nn.flow_patches_f.get_warp_2f(vid,fflow[0],bflow[0],
                                                       k=pa_frames-1,ws=5,warp_ps=4,
                                                       ps=5,stride0=2)
         dims = th.arange(fwd.ndim)[2:].numpy().tolist()
