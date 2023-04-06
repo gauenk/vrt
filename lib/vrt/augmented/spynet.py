@@ -36,7 +36,10 @@ class SpyNet(nn.Module):
         super(SpyNet, self).__init__()
         self.return_levels = return_levels
         self.basic_module = nn.ModuleList([BasicModule() for _ in range(6)])
+        load_path = None if load_path == "" else load_path
+        print(load_path)
         if load_path:
+            print(load_path)
             if not os.path.exists(load_path):
                 import requests
                 url = 'https://github.com/JingyunLiang/VRT/releases/download/v0.0/spynet_sintel_final-3d2a1287.pth'
