@@ -366,8 +366,10 @@ class SpyNet(nn.Module):
         return_levels (list[int]): return flows of different levels. Default: [5].
     """
 
-    def __init__(self, load_path=None, return_levels=[5]):
+    def __init__(self, load_path=None, return_levels=[5], pretrained=None):
         super(SpyNet, self).__init__()
+        if not(pretrained is None):
+            load_path = "./weights/spynet_sintel_final-3d2a1287.pth"
         self.return_levels = return_levels
         self.basic_module = nn.ModuleList([BasicModule() for _ in range(6)])
         if load_path:
